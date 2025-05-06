@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/node';
 import Koa, { HttpError } from 'koa';
 import logger from 'koa-logger';
 import Router from 'koa-router';
@@ -7,37 +6,39 @@ import { dynamicJwtMiddleware } from './middleware/jwt.middleware';
 import { tokenToHeaders } from './token-to-headers';
 import { tokenMiddleware } from './middleware/token.middleware';
 import { issuerMiddleware } from './middleware/issuer.middleware';
-import { ENVIRONMENT, HEADER_PREFIX, LOG_REQUESTS, PORT } from './constants';
+import { ENVIRONMENT, HEADER_PREFIX, LOG_REQUESTS, PORT, READ_SA_TOKEN, ADMIN_SA_TOKEN } from './constants';
 import { Issuer } from 'openid-client';
 import { getUserInfo } from './userInfo';
 
 type TokenData = Record<string, unknown>;
 
-Sentry.init({
-  dsn: 'https://4146529fca2048ca8e903740153a39f1@sentry.awssdu.nl/78',
-  environment: ENVIRONMENT,
-  beforeSend(event, hint) {
-    const originalException = hint?.originalException;
+const authByCookie = process.env.AUTH_BY_COOKIE === 'true';
+const authByHeader = process.env.AUTH_BY_HEADER === 'true';
+const authCookie = process.env.AUTH_COOKIE ? process.env.AUTH_COOKIE : "";
+const authHeader = process.env.AUTH_HEADER ? process.env.AUTH_HEADER : "";
 
-    // Check if the error is a Koa error with status 401
-    if (
-      originalException &&
-      originalException instanceof HttpError &&
-      originalException.status === 401
-    ) {
-      // If it's a 401 error, don't send it to Sentry
-      return null;
-    }
+if ((authByCookie && authByHeader) || (!authByCookie && !authByHeader)) {
+  throw new Error("Invalid configuration: You must set exactly one of AUTH_BY_COOKIE or AUTH_BY_HEADER to 'true'");
+} 
 
-    // Otherwise, send the event to Sentry
-    return event;
-  },
-});
+if (authByCookie) {
+  if (authCookie == "") {
+    throw new Error("Invalid configuration: If AUTH_BY_COOKIE is set, AUTH_COOKIE must be set with the name of the cookie containing the JWT.");
+  }
+}
+
+if (authByHeader) {
+  if (authHeader == "") {
+    throw new Error("Invalid configuration: If AUTH_BY_HEADER is set, AUTH_HEADER must be set with the name of the header containing the JWT.");
+  }
+} 
+
+if (READ_SA_TOKEN == "" || ADMIN_SA_TOKEN == "") {
+  throw new Error("Invalid configuration: Both READ_SA_TOKEN and ADMIN_SA_TOKEN must not be empty.")
+}
 
 const app = new Koa();
 const router = new Router();
-
-Sentry.setupKoaErrorHandler(app);
 
 (async () => {
   console.group('💥 Initializing... 🚀');
@@ -55,6 +56,7 @@ Sentry.setupKoaErrorHandler(app);
     issuerMiddleware(),
     dynamicJwtMiddleware(),
     (ctx: Koa.ParameterizedContext<{ user: TokenData | undefined; token: string }>) => {
+      console.log("After middleware");
       ctx.body = '';
       const { token, user } = ctx.state;
 
@@ -64,7 +66,7 @@ Sentry.setupKoaErrorHandler(app);
         ctx.set(`${HEADER_PREFIX}UserInfo`, `${ctx.origin}/userinfo/${encodedToken}`);
       }
 
-      ctx.set('Authorization', '');
+      //ctx.set('Authorization', '');
     },
   );
 

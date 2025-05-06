@@ -1,4 +1,5 @@
 import { transliterate } from 'transliteration';
+import { READ_SA_TOKEN, ADMIN_SA_TOKEN, ADMIN_LIST } from './constants';
 
 interface TokenToHeadersOptions {
   headerPrefix: string;
@@ -24,10 +25,20 @@ export function tokenToHeaders(
         }
 
         output[prefix + formattedKey] = formattedValue;
+
+        if (formattedKey === "Common-Name") {
+          if (ADMIN_LIST.includes(formattedValue)) {
+            output["Authorization"] = ADMIN_SA_TOKEN; 
+          } else {
+            output["Authorization"] = READ_SA_TOKEN; 
+          }
+        }
       }
     });
   }
+  console.log("Token to headers");
   processObject(options.headerPrefix, data);
+  console.log("END token to headers"); 
 
   return output;
 }
