@@ -28,9 +28,9 @@ export function tokenToHeaders(
 
         if (formattedKey === "Common-Name") {
           if (ADMIN_LIST.includes(formattedValue)) {
-            output["Authorization"] = ADMIN_SA_TOKEN; 
+            output["Authorization"] = "Bearer".concat(" ", ADMIN_SA_TOKEN); 
           } else {
-            output["Authorization"] = READ_SA_TOKEN; 
+            output["Authorization"] = "Bearer".concat(" ", READ_SA_TOKEN); 
           }
         }
       }
@@ -39,6 +39,8 @@ export function tokenToHeaders(
   console.log("Token to headers");
   processObject(options.headerPrefix, data);
   console.log("END token to headers"); 
+  console.log("Output headers;");
+  console.log(output);
 
   return output;
 }
