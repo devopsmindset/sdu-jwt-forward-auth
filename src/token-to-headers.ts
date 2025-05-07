@@ -8,6 +8,7 @@ interface TokenToHeadersOptions {
 export function tokenToHeaders(
   data: Record<string, unknown>,
   options: TokenToHeadersOptions,
+  host: string,
 ): Record<string, string> {
   const output: Record<string, string> = {};
   function processObject(prefix: string, obj: Record<string, unknown>) {
@@ -38,6 +39,11 @@ export function tokenToHeaders(
   }
   console.log("Token to headers");
   processObject(options.headerPrefix, data);
+
+  if (host.includes("headlamp-readonly")) {
+    output["Authorization"] = "Bearer".concat(" ", READ_SA_TOKEN); 
+  }
+
   console.log("END token to headers"); 
   console.log("Output headers;");
   console.log(output);

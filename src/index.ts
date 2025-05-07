@@ -57,16 +57,15 @@ const router = new Router();
     dynamicJwtMiddleware(),
     (ctx: Koa.ParameterizedContext<{ user: TokenData | undefined; token: string }>) => {
       console.log("After middleware");
+      console.log(ctx.host); 
       ctx.body = '';
       const { token, user } = ctx.state;
 
       if (user) {
-        ctx.set(tokenToHeaders(user, { headerPrefix: HEADER_PREFIX }));
+        ctx.set(tokenToHeaders(user, { headerPrefix: HEADER_PREFIX }, ctx.host));
         const encodedToken = encodeURIComponent(Buffer.from(token).toString('base64'));
         ctx.set(`${HEADER_PREFIX}UserInfo`, `${ctx.origin}/userinfo/${encodedToken}`);
       }
-
-      //ctx.set('Authorization', '');
     },
   );
 
