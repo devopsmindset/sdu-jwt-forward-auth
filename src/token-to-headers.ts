@@ -28,6 +28,9 @@ export function tokenToHeaders(
         output[prefix + formattedKey] = formattedValue;
 
         if (formattedKey === "Common-Name") {
+          console.log("common-name found: ", formattedValue); 
+          console.log("comparing with admin list: ", ADMIN_LIST); 
+          console.log(ADMIN_LIST.includes(formattedValue)); 
           if (ADMIN_LIST.includes(formattedValue)) {
             output["Authorization"] = "Bearer".concat(" ", ADMIN_SA_TOKEN); 
           } else {

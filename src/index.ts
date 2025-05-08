@@ -6,7 +6,7 @@ import { dynamicJwtMiddleware } from './middleware/jwt.middleware';
 import { tokenToHeaders } from './token-to-headers';
 import { tokenMiddleware } from './middleware/token.middleware';
 import { issuerMiddleware } from './middleware/issuer.middleware';
-import { ENVIRONMENT, HEADER_PREFIX, LOG_REQUESTS, PORT, READ_SA_TOKEN, ADMIN_SA_TOKEN } from './constants';
+import { ENVIRONMENT, HEADER_PREFIX, LOG_REQUESTS, PORT, READ_SA_TOKEN, ADMIN_SA_TOKEN, ADMIN_LIST } from './constants';
 import { Issuer } from 'openid-client';
 import { getUserInfo } from './userInfo';
 
@@ -44,6 +44,7 @@ const router = new Router();
   console.group('💥 Initializing... 🚀');
 
   console.log('Header prefix:', HEADER_PREFIX);
+  console.log('Admin list:', ADMIN_LIST);
 
   if (LOG_REQUESTS) {
     app.use(logger());
