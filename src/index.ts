@@ -57,12 +57,14 @@ const router = new Router();
     dynamicJwtMiddleware(),
     (ctx: Koa.ParameterizedContext<{ user: TokenData | undefined; token: string }>) => {
       console.log("After middleware");
-      console.log(ctx.host); 
+      const originalHost = ctx.get('x-original-host') || ""; 
+      console.log("Orginal host (read-only): ", originalHost); 
+
       ctx.body = '';
       const { token, user } = ctx.state;
 
       if (user) {
-        ctx.set(tokenToHeaders(user, { headerPrefix: HEADER_PREFIX }, ctx.host));
+        ctx.set(tokenToHeaders(user, { headerPrefix: HEADER_PREFIX }, originalHost));
         const encodedToken = encodeURIComponent(Buffer.from(token).toString('base64'));
         ctx.set(`${HEADER_PREFIX}UserInfo`, `${ctx.origin}/userinfo/${encodedToken}`);
       }
