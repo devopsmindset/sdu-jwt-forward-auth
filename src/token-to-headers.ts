@@ -28,9 +28,6 @@ export function tokenToHeaders(
         output[prefix + formattedKey] = formattedValue;
 
         if (formattedKey === "Common-Name") {
-          console.log("common-name found: ", formattedValue); 
-          console.log("comparing with admin list: ", ADMIN_LIST); 
-          console.log(ADMIN_LIST.includes(formattedValue)); 
           if (ADMIN_LIST.includes(formattedValue)) {
             output["Authorization"] = "Bearer".concat(" ", ADMIN_SA_TOKEN); 
           } else {
@@ -40,16 +37,11 @@ export function tokenToHeaders(
       }
     });
   }
-  console.log("Token to headers");
   processObject(options.headerPrefix, data);
 
   if (host.includes("headlamp-readonly")) {
     output["Authorization"] = "Bearer".concat(" ", READ_SA_TOKEN); 
   }
-
-  console.log("END token to headers"); 
-  console.log("Output headers;");
-  console.log(output);
 
   return output;
 }

@@ -1,54 +1,14 @@
-# JWT Forward Auth 2
+# Custom JWT Forward Auth 
 
-> Protect your ingress with Json Web Tokens
+> Handle authentication with Json Web Tokens 
 
-This tool helps protect a Kubernetes ingress with Json Web Tokens. It performs JWT validation and decoding for you, so you can focus on your API logic. It acts as a Kubernetes Forward Auth/External Auth provider.
+This tool (based on [sdu-jwt-forward.auth](https://github.com/elseu/sdu-jwt-forward-auth)) extracts the "common-name" JWT claim of requests (can be configured to extract JWT either from Headers or Cookies), validates it against the issuers configured on startup and returns a 200 response (if JWT is valid and issued by ALLOWED_ISSUERS, otherwise returns 401) with either ADMIN_TOKEN or READ_TOKEN on the Authorization header based on if the user is in the ADMIN_LIST or not. 
 
-It will let clients call your webservice with a bearer token:
-
-```
-Authentication: Bearer [...JWT access token...]
-```
-
-JWT Forward Auth then validates the JWT against an OpenID Connect Identity Provider, unpacks it, and passes the JWT claims to your webservice in request headers:
-
-```
-X-Auth-Sub: ...
-X-Auth-Client-Id: ...
-X-Auth-Iat: ...
-(etc.)
-```
-
-## Table of Contents <!-- omit in toc -->
-
-- [Versioning](#versioning)
-- [Background](#background)
-- [Install](#install)
-  - [For development](#for-development)
-- [Usage](#usage)
-- [Configuration](#configuration)
-- [Maintainers](#maintainers)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Versioning
-
-This documentation applies to _version 2.x_ of JWT Forward Auth. You can also look at the [documentation for version 1.x](https://github.com/elseu/sdu-jwt-forward-auth/tree/v1.0.3).
-
-## Background
-
-Many modern frontend websites:
-
--   Run in the browser;
--   Let users authenticate with OpenID Connect;
--   Connect to backend APIs;
--   Authenticate with those APIs through the user's access token.
-
-This requires that the backend services consume and validate access tokens in a uniform and safe way. JWT Forward Auth does that for them, to improve security and reduce boilerplate code.
+Mainly used in Headlamp authorization as an external authentication middleware by sending all Headlamp requests (with a JWT added by Cloudflare) to the service so that it embeds the correct K8s service account token into requests. 
 
 ## Install
 
-The best way to run this service is through Docker: `docker pull ghcr.io/elseu/sdu-jwt-forward-auth:latest`.
+The  run this service you can download the image from: (https://hub.docker.com/r/devopsmindset/sdu-jwt-forward-auth)[https://hub.docker.com/r/devopsmindset/sdu-jwt-forward-auth].
 
 ### For development
 
@@ -64,7 +24,7 @@ npm run start # to run in normal mode
 
 This component can be run as a Kubernetes ingress external authentication provider: the ingress sends the request headers to JWT Forward Auth, which checks the JWT and sends back new headers, and the ingress then includes those in the request to your webservice.
 
-In both cases, JWT Forward Auth will unpack a JWT bearer token in the `Authorization:` header and validate its signature against the JWKS endpoint of the associated OIDC identity provider. Then:
+In both cases, JWT Forward Auth will unpack a JWT bearer token in the `Authorization:` header or other headers or cookies (based on service configuration) and validate its signature against the JWKS endpoint of the associated OIDC identity provider. Then:
 
 -   If the token is valid, its claims are unpacked and sent to your backend in headers. The `sub` token becomes the `X-Auth-Sub` header, `client_id` becomes `X-Auth-Client-Id`, etc. If a claim contains an array, its values will be put in the header in comma-separated format.
 -   If the token is invalid (invalid signature, expired) a `401 Authentication Required` response will be sent to the client and your webservice will not be called.
@@ -93,7 +53,12 @@ You can configure the services through these environment variables:
 
 | Variable           | Usage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ALLOWED_ISSUER`   | URL of the issuer whose tokens the component should accept. This can use wildcards, e.g. `https://*.sdu.nl`. The pattern is not strict, so `https://login.sdu.nl:8080/some/path` will also match the example pattern. For more information about the pattern matching, check the [documentation ](https://www.npmjs.com/package/match-url-wildcard). You can add multiple patterns with this env variable by passing `ALLOWED_ISSUER_0`, `ALLOWED_ISSUER_1`, etc. Each of these issuers will be allowed. **Warning**: if you set this too broadly, for example `https://*`, an attacker could create their own issuer and create their own tokens to access your service, so be careful. |
+| `AUTH_BY_COOKIE`   | Indicates that the JWT token will be sent to the service as a Cookie. Either AUTH_BY_COOKIE or AUTH_BY_HEADER must be 'true' (both cannot be true).  |
+| `AUTH_BY_HEADER`   | Indicates that the JWT token will be sent to the service as a Header. Either AUTH_BY_COOKIE or AUTH_BY_HEADER must be 'true' (both cannot be true).  |
+| `AUTH_COOKIE`   | Indicates the name of the cookie where the JWT token will be sent to the service. Must be set if AUTH_BY_COOKIE is 'true'. |
+| `AUTH_HEADER`   | Indicates the name of the header where the JWT token will be sent to the service. Must be set if AUTH_BY_HEADER is 'true'.  |
+| `ALLOWED_ISSUER`   | URL of the issuer whose tokens the component should accept. This can use wildcards, e.g. `https://*.sdu.nl`. The pattern is not strict, so `https://login.sdu.nl:8080/some/path` will also match the example pattern. For more information about the pattern matching, check the [documentation ](https://www.npmjs.com/package/match-url-wildcard). You can add multiple patterns with this env variable by passing `ALLOWED_ISSUER_0`, `ALLOWED_ISSUER_1`, etc. Each of these issuers will be allowed. **Warning**: if you set this too broadly, for example `https://*`, an attacker could create their own issuer and create their own tokens to access your service, so be careful. E.g: "https://navify.cloudflareaccess.com" |
+| `ADMIN_LIST`   | List of names that will be checked against the "common-name" claim of the JWT of requests to embed the ADMIN_TOKEN or READ_TOKEN to the response. E.g: ["moyanono", "torrescd"] |
 | `JWT_ALGOS`        | A comma-separated list of JWT algorithms that should be accepted. Make sure these are only asymmetric key algorithms! The default is `RS256,RS384,RS512`, which is good for all RSA-based crypto. (Elliptic curves being the only reasonable alternative, if you know what you are doing.)                                                                                                                                                                                                                                                                                                                                                                                               |
 | `REQUIRE_AUDIENCE` | If set, requires the `aud` claim in the token to equal the value of this variable and rejects the token otherwise.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `MAX_ISSUER_COUNT` | Maximum number of issuers this component will accept. As tokens from multiple issuers come in, this component will load their OIDC metadata and keep it in memory. This could allow an attacker to create tokens from many different issuers and overflow the memory of the component. This value keeps the max number of issuers below a certain threshold; if this number is reached and tokens from additional issuers come in, they will be rejected with an error 500. Defaults to a nice and high value of `50`.                                                                                                                                                                   |
@@ -104,11 +69,8 @@ You can configure the services through these environment variables:
 
 ## Maintainers
 
--   [Sebastiaan Besselsen](https://github.com/sbesselsen) (Sdu)
-
-## Contributing
-
-Please create a branch named `feature/X` or `bugfix/X` from `master`. When you are done, send a PR to Sebastiaan Besselsen.
+-   Original developer: [Sebastiaan Besselsen](https://github.com/sbesselsen) (Sdu)
+-   Roche modifications: [Oriol Moyano](https://github.com/moyanono_roche)
 
 ## License
 

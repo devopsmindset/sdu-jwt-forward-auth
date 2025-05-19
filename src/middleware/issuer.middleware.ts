@@ -30,8 +30,6 @@ export function issuerMiddleware(): Middleware<{
     }
 
     const tokenData = jsonwebtoken.decode(ctx.state.token);
-    console.log("Token data:");
-    console.log(tokenData);
 
     if (!tokenData || typeof tokenData === 'string') {
       // Invalid token data.
@@ -71,11 +69,7 @@ export function issuerMiddleware(): Middleware<{
     }
 
     const discoveryUrl = new URL('/.well-known/openid-configuration', issuerKey);
-    console.log("DiscoveryURL");
-    console.log(discoveryUrl);
     const issuer = await Issuer.discover(discoveryUrl.toString());
-    console.log("After issuer discover");
-    console.log(issuer);
 
     if (!issuer.metadata.jwks_uri) {
       throw new Error(`No JWKS URI found for issuer" ${issuerKey}`);
@@ -83,7 +77,7 @@ export function issuerMiddleware(): Middleware<{
 
     issuers[issuerKey] = issuer;
     ctx.state.issuer = issuers[issuerKey];
-    console.log("End issuer middleware")
+    
     await next();
   };
 }
